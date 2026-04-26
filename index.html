@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EKG Rütmi Tuvastamine</title>
+  <style>
+    :root {
+      --color-primary:       #1a6eb5;
+      --color-primary-hover: #155a94;
+      --color-surface:       #ffffff;
+      --color-bg:            #f0f4f8;
+      --color-text:          #1a202c;
+      --color-muted:         #718096;
+      --color-border:        #e2e8f0;
+      --color-success:       #2f855a;
+      --color-warning:       #c05621;
+      --color-danger:        #c53030;
+      --color-chip-bg:       #ebf4ff;
+      --color-chip-text:     #2b6cb0;
+      --radius:              8px;
+      --shadow:              0 2px 8px rgba(0,0,0,0.08);
+      --transition:          0.2s ease;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--color-bg);
+      color: var(--color-text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #app {
+      max-width: 640px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.5rem 1rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--color-primary);
+      letter-spacing: -0.02em;
+    }
+
+    header p {
+      font-size: 0.85rem;
+      color: var(--color-muted);
+      margin-top: 0.25rem;
+    }
+
+    .progress-bar-wrap {
+      margin-top: 0.75rem;
+      height: 4px;
+      background: var(--color-border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--color-primary);
+      border-radius: 2px;
+      transition: width var(--transition);
+    }
+
+    /* Breadcrumb */
+    #breadcrumb {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      min-height: 0;
+    }
+
+    .chip {
+      background: var(--color-chip-bg);
+      color: var(--color-chip-text);
+      border-radius: 100px;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.78rem;
+      font-weight: 500;
+      white-space: nowrap;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--color-surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.5rem;
+    }
+
+    #question-card .step-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-muted);
+      margin-bottom: 0.6rem;
+    }
+
+    #question-card .question-text {
+      font-size: 1.25rem;
+      font-weight: 700;
+      line-height: 1.35;
+      margin-bottom: 1.25rem;
+    }
+
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .option-btn {
+      display: block;
+      width: 100%;
+      min-height: 44px;
+      padding: 0.65rem 1rem;
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--color-primary);
+      background: var(--color-surface);
+      border: 2px solid var(--color-primary);
+      border-radius: var(--radius);
+      cursor: pointer;
+      text-align: left;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    .option-btn:hover,
+    .option-btn:focus-visible {
+      background: var(--color-primary);
+      color: #fff;
+      outline: none;
+    }
+
+    .option-btn:focus-visible {
+      outline: 3px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+
+    /* Result card */
+    #result-card {
+      display: none;
+      border-left: 5px solid var(--color-muted);
+    }
+
+    #result-card.result--normal  { border-left-color: var(--color-success); }
+    #result-card.result--warning { border-left-color: var(--color-warning); }
+    #result-card.result--danger  { border-left-color: var(--color-danger); }
+
+    .result-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .result-name {
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+    }
+
+    #result-card.result--normal  .result-name { color: var(--color-success); }
+    #result-card.result--warning .result-name { color: var(--color-warning); }
+    #result-card.result--danger  .result-name { color: var(--color-danger); }
+
+    .result-desc {
+      font-size: 0.95rem;
+      color: var(--color-muted);
+      line-height: 1.5;
+    }
+
+    /* Footer */
+    footer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.6rem;
+      padding-bottom: 1rem;
+    }
+
+    .restart-btn {
+      padding: 0.6rem 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--color-primary);
+      background: transparent;
+      border: 2px solid var(--color-primary);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    .restart-btn:hover,
+    .restart-btn:focus-visible {
+      background: var(--color-primary);
+      color: #fff;
+      outline: none;
+    }
+
+    .restart-btn:focus-visible {
+      outline: 3px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+
+    .disclaimer {
+      font-size: 0.72rem;
+      color: var(--color-muted);
+      text-align: center;
+    }
+
+    @media (max-width: 480px) {
+      header h1 { font-size: 1.25rem; }
+      #question-card .question-text { font-size: 1.1rem; }
+      .card { padding: 1.1rem; }
+    }
+  </style>
+</head>
+<body>
+<div id="app" role="main">
+  <header>
+    <h1>EKG Rütmi Tuvastamine</h1>
+    <p>Samm-sammuline otsustuspuu &mdash; Elizabeth Gherardin 1999</p>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+  </header>
+
+  <div id="breadcrumb" aria-label="Tehtud otsused"></div>
+
+  <div id="question-card" class="card" aria-live="polite"></div>
+
+  <div id="result-card" class="card" aria-live="polite"></div>
+
+  <footer>
+    <button class="restart-btn" id="restart-btn" aria-label="Alusta tuvastamist uuesti">
+      Alusta uuesti
+    </button>
+    <p class="disclaimer">See tööriist on ainult hariduslikul eesmärgil.</p>
+  </footer>
+</div>
+
+<script>
+// ─── Section A: Data ────────────────────────────────────────────────────────
+
+const TREE = {
+  "root": {
+    id: "root",
+    question: "Kas P-laine on olemas?",
+    options: [
+      { label: "Jah, normaalne",    next: "p-always-related" },
+      { label: "Jah, ebanormaalne", next: "p-abnormal" },
+      { label: "Ei",                next: "no-p-wave" }
+    ]
+  },
+  "p-always-related": {
+    id: "p-always-related",
+    question: "Kas P-laine on ALATI seotud QRS-kompleksiga?",
+    options: [
+      { label: "Jah", next: "pr-interval" },
+      { label: "Ei",  next: "p-sometimes" }
+    ]
+  },
+  "pr-interval": {
+    id: "pr-interval",
+    question: "Milline on PR-intervall?",
+    options: [
+      { label: "Normaalne", next: "result-sinus" },
+      { label: "Pikk",      next: "result-av1" }
+    ]
+  },
+  "p-sometimes": {
+    id: "p-sometimes",
+    question: "Kui tihti on P-laine QRS-iga seotud?",
+    options: [
+      { label: "Mõnikord",      next: "result-av2" },
+      { label: "Mitte kunagi",  next: "p-never" }
+    ]
+  },
+  "p-never": {
+    id: "p-never",
+    question: "Kas QRS-kompleks on olemas?",
+    options: [
+      { label: "Jah", next: "result-av3" },
+      { label: "Ei",  next: "result-standstill" }
+    ]
+  },
+  "p-abnormal": {
+    id: "p-abnormal",
+    question: "Milline on P-laine muster?",
+    options: [
+      { label: "300/min (saehamba muster)",         next: "result-aflutter" },
+      { label: "Inverteeritud enne/pärast QRS-i",   next: "result-junctional" }
+    ]
+  },
+  "no-p-wave": {
+    id: "no-p-wave",
+    question: "Milline on QRS-kompleksi laius?",
+    options: [
+      { label: "Kitsas", next: "qrs-narrow" },
+      { label: "Lai",    next: "qrs-wide" },
+      { label: "Puudub", next: "result-vf" }
+    ]
+  },
+  "qrs-narrow": {
+    id: "qrs-narrow",
+    question: "Milline on rütm?",
+    options: [
+      { label: "Regulaarne",    next: "result-atrial-junctional" },
+      { label: "Ebaregulaarne", next: "result-af" }
+    ]
+  },
+  "qrs-wide": {
+    id: "qrs-wide",
+    question: "Milline on rütm?",
+    options: [
+      { label: "Regulaarne",    next: "result-ventricular" },
+      { label: "Ebaregulaarne", next: "result-aberrant" }
+    ]
+  },
+
+  // ── Results ──────────────────────────────────────────────────────────────
+  "result-sinus": {
+    id: "result-sinus",
+    result: "Siinus rütm",
+    description: "Normaalne P-laine, normaalse PR-intervalliga. Impulss pärineb siinussõlmest.",
+    severity: "normal"
+  },
+  "result-av1": {
+    id: "result-av1",
+    result: "I astme AV blokaad",
+    description: "P-laine on olemas ja seotud QRS-iga, kuid PR-intervall on pikenenud (>200 ms). Impulsi juhtimine AV-sõlmes on aeglustunud.",
+    severity: "warning"
+  },
+  "result-av2": {
+    id: "result-av2",
+    result: "II astme AV blokaad",
+    description: "P-laine esineb, kuid mõnikord ei järgne sellele QRS-kompleks. Osa impulsse blokeeritakse AV-sõlmes.",
+    severity: "warning"
+  },
+  "result-av3": {
+    id: "result-av3",
+    result: "III astme AV blokaad",
+    description: "Täielik AV-blokaad: P-lained ja QRS-kompleksid on teineteisest sõltumatud. Kodade ja vatsakeste aktiivsus on dissotsieerunud.",
+    severity: "danger"
+  },
+  "result-standstill": {
+    id: "result-standstill",
+    result: "Vatsakeste seisak",
+    description: "P-lained esinevad, kuid QRS-kompleks puudub täielikult. Vatsakesed ei aktiveeru.",
+    severity: "danger"
+  },
+  "result-aflutter": {
+    id: "result-aflutter",
+    result: "Kodade laperdus (AFL)",
+    description: "Ebanormaalne P-laine sagedusega ~300/min, saehamba muster. Kodade kiire ja regulaarne aktiivsus.",
+    severity: "warning"
+  },
+  "result-junctional": {
+    id: "result-junctional",
+    result: "Junktsionaalne rütm",
+    description: "P-laine on inverteeritud enne või pärast QRS-i — impulss pärineb AV-sõlme piirkonnast.",
+    severity: "warning"
+  },
+  "result-atrial-junctional": {
+    id: "result-atrial-junctional",
+    result: "Kodade / junktsionaalne rütm",
+    description: "Kitsas regulaarne QRS ilma selge P-laineta. Pärineb kodadest või AV-sõlmest.",
+    severity: "warning"
+  },
+  "result-af": {
+    id: "result-af",
+    result: "Kodade virvendus (AF)",
+    description: "Kitsas ebaregulaarne QRS, P-lained puuduvad. Kodade kaootilisest aktiivsusest tingitud ebaregulaarne rütm.",
+    severity: "warning"
+  },
+  "result-ventricular": {
+    id: "result-ventricular",
+    result: "Vatsakeste rütm",
+    description: "Lai regulaarne QRS ilma P-laineta. Impulss pärineb vatsakestest.",
+    severity: "warning"
+  },
+  "result-aberrant": {
+    id: "result-aberrant",
+    result: "Aberrantne AF / vatsakeste rütm",
+    description: "Lai ebaregulaarne QRS — võib olla kodade virvendus aberrantse juhtivusega või vatsakeste päritoluga rütm.",
+    severity: "danger"
+  },
+  "result-vf": {
+    id: "result-vf",
+    result: "VF / Asüstoolia",
+    description: "QRS-kompleks puudub täielikult. Vatsakeste virvendus või asüstoolia — eluohtlik seisund.",
+    severity: "danger"
+  }
+};
+
+// ─── Section B: Engine ───────────────────────────────────────────────────────
+
+function getNode(id) { return TREE[id]; }
+function isResult(node) { return Boolean(node.result); }
+
+// ─── Section C: UI ───────────────────────────────────────────────────────────
+
+let currentNodeId = "root";
+let history = [];
+
+const MAX_DEPTH = 4;
+
+function renderBreadcrumb(hist) {
+  const el = document.getElementById("breadcrumb");
+  if (!hist.length) { el.innerHTML = ""; return; }
+  el.innerHTML = hist.map(h => {
+    const q = h.question.length > 32 ? h.question.slice(0, 30) + "…" : h.question;
+    return `<span class="chip" title="${h.question} → ${h.label}">${q} → ${h.label}</span>`;
+  }).join("");
+}
+
+function renderQuestion(node, step) {
+  const card = document.getElementById("question-card");
+  card.style.display = "";
+  document.getElementById("result-card").style.display = "none";
+
+  const btns = node.options.map(opt =>
+    `<button class="option-btn" data-next="${opt.next}" data-label="${opt.label}">${opt.label}</button>`
+  ).join("");
+
+  card.innerHTML = `
+    <div class="step-label">Samm ${step}</div>
+    <div class="question-text">${node.question}</div>
+    <div class="options">${btns}</div>
+  `;
+
+  const pct = Math.min(Math.round(((step - 1) / MAX_DEPTH) * 100), 95);
+  document.getElementById("progress-fill").style.width = pct + "%";
+}
+
+function renderResult(node) {
+  const qCard = document.getElementById("question-card");
+  const rCard = document.getElementById("result-card");
+  qCard.style.display = "none";
+  rCard.style.display = "";
+  rCard.className = `card result--${node.severity}`;
+
+  rCard.innerHTML = `
+    <div class="result-label">Tuvastatud rütm</div>
+    <div class="result-name">${node.result}</div>
+    <div class="result-desc">${node.description}</div>
+  `;
+
+  document.getElementById("progress-fill").style.width = "100%";
+}
+
+function handleAnswer(label, nextId) {
+  const current = getNode(currentNodeId);
+  history.push({ question: current.question, label });
+  currentNodeId = nextId;
+
+  renderBreadcrumb(history);
+
+  const next = getNode(nextId);
+  if (isResult(next)) {
+    renderResult(next);
+  } else {
+    renderQuestion(next, history.length + 1);
+  }
+}
+
+function handleRestart() {
+  currentNodeId = "root";
+  history = [];
+  renderBreadcrumb(history);
+  document.getElementById("result-card").style.display = "none";
+  document.getElementById("progress-fill").style.width = "0%";
+  renderQuestion(getNode("root"), 1);
+}
+
+function init() {
+  document.getElementById("app").addEventListener("click", e => {
+    const btn = e.target.closest(".option-btn");
+    if (btn) {
+      handleAnswer(btn.dataset.label, btn.dataset.next);
+    }
+  });
+
+  document.getElementById("restart-btn").addEventListener("click", handleRestart);
+
+  renderQuestion(getNode("root"), 1);
+}
+
+init();
+</script>
+</body>
+</html>
