@@ -152,6 +152,11 @@
       outline: none;
     }
 
+    .option-btn:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
     .option-btn:focus-visible {
       outline: 3px solid var(--color-primary);
       outline-offset: 2px;
@@ -428,6 +433,30 @@ let currentNodeId = "root";
 let history = [];
 
 const MAX_DEPTH = 4;
+const ANSWER_LOCK_MS = 350;
+let acceptingAnswer = true;
+let answerUnlockTimer = null;
+
+function setOptionsDisabled(disabled) {
+  document.querySelectorAll(".option-btn").forEach(btn => {
+    btn.disabled = disabled;
+  });
+}
+
+function lockAnswersTemporarily() {
+  acceptingAnswer = false;
+  setOptionsDisabled(true);
+
+  if (answerUnlockTimer) {
+    clearTimeout(answerUnlockTimer);
+  }
+
+  answerUnlockTimer = setTimeout(() => {
+    acceptingAnswer = true;
+    answerUnlockTimer = null;
+    setOptionsDisabled(false);
+  }, ANSWER_LOCK_MS);
+}
 
 function renderBreadcrumb(hist) {
   const el = document.getElementById("breadcrumb");
@@ -444,7 +473,7 @@ function renderQuestion(node, step) {
   document.getElementById("result-card").style.display = "none";
 
   const btns = node.options.map(opt =>
-    `<button class="option-btn" data-next="${opt.next}" data-label="${opt.label}">${opt.label}</button>`
+    `<button class="option-btn" data-next="${opt.next}" data-label="${opt.label}"${acceptingAnswer ? "" : " disabled"}>${opt.label}</button>`
   ).join("");
 
   card.innerHTML = `
@@ -474,6 +503,10 @@ function renderResult(node) {
 }
 
 function handleAnswer(label, nextId) {
+  if (!acceptingAnswer) { return; }
+
+  lockAnswersTemporarily();
+
   const current = getNode(currentNodeId);
   history.push({ question: current.question, label });
   currentNodeId = nextId;
@@ -489,6 +522,12 @@ function handleAnswer(label, nextId) {
 }
 
 function handleRestart() {
+  if (answerUnlockTimer) {
+    clearTimeout(answerUnlockTimer);
+    answerUnlockTimer = null;
+  }
+
+  acceptingAnswer = true;
   currentNodeId = "root";
   history = [];
   renderBreadcrumb(history);
@@ -500,7 +539,7 @@ function handleRestart() {
 function init() {
   document.getElementById("app").addEventListener("click", e => {
     const btn = e.target.closest(".option-btn");
-    if (btn) {
+    if (btn && !btn.disabled) {
       handleAnswer(btn.dataset.label, btn.dataset.next);
     }
   });
