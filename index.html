@@ -426,8 +426,10 @@ function isResult(node) { return Boolean(node.result); }
 
 let currentNodeId = "root";
 let history = [];
+let isAnswerLocked = false;
 
 const MAX_DEPTH = 4;
+const ANSWER_LOCK_MS = 250;
 
 function renderBreadcrumb(hist) {
   const el = document.getElementById("breadcrumb");
@@ -473,8 +475,26 @@ function renderResult(node) {
   document.getElementById("progress-fill").style.width = "100%";
 }
 
-function handleAnswer(label, nextId) {
+function getCurrentOption(label, nextId) {
   const current = getNode(currentNodeId);
+  if (!current || isResult(current)) return null;
+  return current.options.find(opt => opt.label === label && opt.next === nextId) || null;
+}
+
+function unlockAnswersSoon() {
+  window.setTimeout(() => {
+    isAnswerLocked = false;
+  }, ANSWER_LOCK_MS);
+}
+
+function handleAnswer(label, nextId) {
+  if (isAnswerLocked) return;
+
+  const selected = getCurrentOption(label, nextId);
+  if (!selected) return;
+
+  const current = getNode(currentNodeId);
+  isAnswerLocked = true;
   history.push({ question: current.question, label });
   currentNodeId = nextId;
 
@@ -486,11 +506,14 @@ function handleAnswer(label, nextId) {
   } else {
     renderQuestion(next, history.length + 1);
   }
+
+  unlockAnswersSoon();
 }
 
 function handleRestart() {
   currentNodeId = "root";
   history = [];
+  isAnswerLocked = false;
   renderBreadcrumb(history);
   document.getElementById("result-card").style.display = "none";
   document.getElementById("progress-fill").style.width = "0%";
