@@ -426,8 +426,10 @@ function isResult(node) { return Boolean(node.result); }
 
 let currentNodeId = "root";
 let history = [];
+let answerLocked = false;
 
 const MAX_DEPTH = 4;
+const ANSWER_LOCK_MS = 250;
 
 function renderBreadcrumb(hist) {
   const el = document.getElementById("breadcrumb");
@@ -475,22 +477,30 @@ function renderResult(node) {
 
 function handleAnswer(label, nextId) {
   const current = getNode(currentNodeId);
-  history.push({ question: current.question, label });
-  currentNodeId = nextId;
+  if (answerLocked || !current || isResult(current)) return;
+
+  const selected = current.options.find(opt => opt.label === label && opt.next === nextId);
+  if (!selected) return;
+
+  answerLocked = true;
+  history.push({ question: current.question, label: selected.label });
+  currentNodeId = selected.next;
 
   renderBreadcrumb(history);
 
-  const next = getNode(nextId);
+  const next = getNode(selected.next);
   if (isResult(next)) {
     renderResult(next);
   } else {
     renderQuestion(next, history.length + 1);
+    setTimeout(() => { answerLocked = false; }, ANSWER_LOCK_MS);
   }
 }
 
 function handleRestart() {
   currentNodeId = "root";
   history = [];
+  answerLocked = false;
   renderBreadcrumb(history);
   document.getElementById("result-card").style.display = "none";
   document.getElementById("progress-fill").style.width = "0%";
