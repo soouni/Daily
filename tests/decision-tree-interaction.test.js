@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
+const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
 
@@ -41,7 +42,7 @@ function createDocument() {
 }
 
 function loadApp() {
-  const html = readFileSync(new URL('../index.html', __dirname), 'utf8');
+  const html = readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
   const context = {
     document: createDocument()
