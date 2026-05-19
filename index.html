@@ -473,14 +473,31 @@ function renderResult(node) {
   document.getElementById("progress-fill").style.width = "100%";
 }
 
+function getSelectedOption(current, label, nextId) {
+  if (!current || isResult(current) || !Array.isArray(current.options)) {
+    return null;
+  }
+
+  return current.options.find(opt => opt.label === label && opt.next === nextId) || null;
+}
+
 function handleAnswer(label, nextId) {
   const current = getNode(currentNodeId);
-  history.push({ question: current.question, label });
-  currentNodeId = nextId;
+  const selected = getSelectedOption(current, label, nextId);
+  if (!selected) {
+    return;
+  }
+
+  const next = getNode(selected.next);
+  if (!next) {
+    return;
+  }
+
+  history.push({ question: current.question, label: selected.label });
+  currentNodeId = selected.next;
 
   renderBreadcrumb(history);
 
-  const next = getNode(nextId);
   if (isResult(next)) {
     renderResult(next);
   } else {
