@@ -426,8 +426,11 @@ function isResult(node) { return Boolean(node.result); }
 
 let currentNodeId = "root";
 let history = [];
+let answerLocked = false;
+let answerUnlockTimer = null;
 
 const MAX_DEPTH = 4;
+const ANSWER_LOCK_MS = 350;
 
 function renderBreadcrumb(hist) {
   const el = document.getElementById("breadcrumb");
@@ -473,22 +476,62 @@ function renderResult(node) {
   document.getElementById("progress-fill").style.width = "100%";
 }
 
+function getSelectedOption(current, label, nextId) {
+  if (!current || isResult(current) || !Array.isArray(current.options)) {
+    return null;
+  }
+
+  return current.options.find(opt => opt.label === label && opt.next === nextId) || null;
+}
+
+function unlockAnswersSoon() {
+  if (answerUnlockTimer) {
+    clearTimeout(answerUnlockTimer);
+  }
+
+  answerUnlockTimer = setTimeout(() => {
+    answerLocked = false;
+    answerUnlockTimer = null;
+  }, ANSWER_LOCK_MS);
+}
+
 function handleAnswer(label, nextId) {
+  if (answerLocked) {
+    return;
+  }
+
   const current = getNode(currentNodeId);
-  history.push({ question: current.question, label });
-  currentNodeId = nextId;
+  const selected = getSelectedOption(current, label, nextId);
+  if (!selected) {
+    return;
+  }
+
+  const next = getNode(selected.next);
+  if (!next) {
+    return;
+  }
+
+  answerLocked = true;
+  history.push({ question: current.question, label: selected.label });
+  currentNodeId = selected.next;
 
   renderBreadcrumb(history);
 
-  const next = getNode(nextId);
   if (isResult(next)) {
     renderResult(next);
   } else {
     renderQuestion(next, history.length + 1);
+    unlockAnswersSoon();
   }
 }
 
 function handleRestart() {
+  if (answerUnlockTimer) {
+    clearTimeout(answerUnlockTimer);
+    answerUnlockTimer = null;
+  }
+
+  answerLocked = false;
   currentNodeId = "root";
   history = [];
   renderBreadcrumb(history);
