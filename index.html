@@ -475,12 +475,23 @@ function renderResult(node) {
 
 function handleAnswer(label, nextId) {
   const current = getNode(currentNodeId);
-  history.push({ question: current.question, label });
-  currentNodeId = nextId;
+  if (!current || isResult(current)) {
+    return;
+  }
+
+  const selected = current.options.find(opt =>
+    opt.label === label && opt.next === nextId
+  );
+  if (!selected) {
+    return;
+  }
+
+  history.push({ question: current.question, label: selected.label });
+  currentNodeId = selected.next;
 
   renderBreadcrumb(history);
 
-  const next = getNode(nextId);
+  const next = getNode(selected.next);
   if (isResult(next)) {
     renderResult(next);
   } else {
