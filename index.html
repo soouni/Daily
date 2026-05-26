@@ -475,6 +475,15 @@ function renderResult(node) {
 
 function handleAnswer(label, nextId) {
   const current = getNode(currentNodeId);
+  if (!current || isResult(current)) {
+    return;
+  }
+
+  const selected = current.options.find(opt => opt.label === label && opt.next === nextId);
+  if (!selected || !getNode(nextId)) {
+    return;
+  }
+
   history.push({ question: current.question, label });
   currentNodeId = nextId;
 
