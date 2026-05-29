@@ -444,7 +444,7 @@ function renderQuestion(node, step) {
   document.getElementById("result-card").style.display = "none";
 
   const btns = node.options.map(opt =>
-    `<button class="option-btn" data-next="${opt.next}" data-label="${opt.label}">${opt.label}</button>`
+    `<button class="option-btn" data-node-id="${node.id}" data-next="${opt.next}" data-label="${opt.label}">${opt.label}</button>`
   ).join("");
 
   card.innerHTML = `
@@ -473,14 +473,35 @@ function renderResult(node) {
   document.getElementById("progress-fill").style.width = "100%";
 }
 
-function handleAnswer(label, nextId) {
+function getSelectedOption(current, label, nextId) {
+  if (!current || isResult(current) || !Array.isArray(current.options)) {
+    return null;
+  }
+
+  return current.options.find(opt => opt.label === label && opt.next === nextId) || null;
+}
+
+function handleAnswer(label, nextId, nodeId = currentNodeId) {
+  if (nodeId !== currentNodeId) {
+    return;
+  }
+
   const current = getNode(currentNodeId);
-  history.push({ question: current.question, label });
-  currentNodeId = nextId;
+  const selected = getSelectedOption(current, label, nextId);
+  if (!selected) {
+    return;
+  }
+
+  const next = getNode(selected.next);
+  if (!next) {
+    return;
+  }
+
+  history.push({ question: current.question, label: selected.label });
+  currentNodeId = selected.next;
 
   renderBreadcrumb(history);
 
-  const next = getNode(nextId);
   if (isResult(next)) {
     renderResult(next);
   } else {
@@ -501,7 +522,7 @@ function init() {
   document.getElementById("app").addEventListener("click", e => {
     const btn = e.target.closest(".option-btn");
     if (btn) {
-      handleAnswer(btn.dataset.label, btn.dataset.next);
+      handleAnswer(btn.dataset.label, btn.dataset.next, btn.dataset.nodeId);
     }
   });
 
