@@ -93,7 +93,7 @@ test('valid decision path renders a result', () => {
   const progress = app.document.getElementById('progress-fill');
 
   assert.equal(questionCard.style.display, 'none');
-  assert.equal(resultCard.style.display, '');
+  assert.equal(resultCard.style.display, 'block');
   assert.match(resultCard.innerHTML, /Siinus rütm/);
   assert.equal(progress.style.width, '100%');
 });
