@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { once } from "node:events";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
@@ -90,7 +91,8 @@ async function launchChrome(pageUrl) {
     client: await CdpClient.connect(pageWsUrl),
     async close() {
       chrome.kill();
-      await rm(userDataDir, { recursive: true, force: true });
+      await once(chrome, "exit");
+      await rm(userDataDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     },
   };
 }
