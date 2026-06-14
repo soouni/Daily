@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const { spawn } = require("node:child_process");
+const { once } = require("node:events");
 const fs = require("node:fs");
 const net = require("node:net");
 const os = require("node:os");
@@ -64,8 +65,15 @@ async function launchChrome(t) {
     stderr += chunk.toString();
   });
 
-  t.after(() => {
-    chrome.kill();
+  t.after(async () => {
+    if (chrome.exitCode === null) {
+      chrome.kill();
+      await Promise.race([
+        once(chrome, "exit"),
+        delay(2000)
+      ]);
+    }
+
     fs.rmSync(userDataDir, { recursive: true, force: true });
   });
 
