@@ -104,8 +104,11 @@ async function startChrome() {
     "about:blank"
   ], { stdio: "ignore" });
 
-  const browserVersion = await waitForJson(`http://127.0.0.1:${port}/json/version`);
-  const wsUrl = browserVersion.webSocketDebuggerUrl;
+  await waitForJson(`http://127.0.0.1:${port}/json/version`);
+  const targets = await waitForJson(`http://127.0.0.1:${port}/json/list`);
+  const pageTarget = targets.find(target => target.type === "page");
+  assert.ok(pageTarget, "Chrome did not expose a page target");
+  const wsUrl = pageTarget.webSocketDebuggerUrl;
 
   return {
     port,
