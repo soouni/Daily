@@ -461,7 +461,7 @@ function renderResult(node) {
   const qCard = document.getElementById("question-card");
   const rCard = document.getElementById("result-card");
   qCard.style.display = "none";
-  rCard.style.display = "";
+  rCard.style.display = "block";
   rCard.className = `card result--${node.severity}`;
 
   rCard.innerHTML = `
