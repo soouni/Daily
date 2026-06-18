@@ -11,6 +11,20 @@ const ROOT = path.resolve(__dirname, "..");
 const INDEX_PATH = path.join(ROOT, "index.html");
 const CHROME_BIN = process.env.CHROME_BIN || "/usr/local/bin/google-chrome";
 
+async function rmDirEventually(dir) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      fs.rmSync(dir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+      return;
+    } catch (error) {
+      if (attempt === 4) {
+        throw error;
+      }
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+}
+
 function getFreePort() {
   return new Promise((resolve, reject) => {
     const server = net.createServer();
@@ -97,9 +111,13 @@ async function startChrome() {
     port,
     wsUrl,
     close: async () => {
-      chrome.kill();
-      await new Promise(resolve => chrome.once("exit", resolve));
-      fs.rmSync(userDataDir, { recursive: true, force: true });
+      if (!chrome.killed) {
+        chrome.kill();
+      }
+      if (chrome.exitCode === null) {
+        await new Promise(resolve => chrome.once("exit", resolve));
+      }
+      await rmDirEventually(userDataDir);
     }
   };
 }
