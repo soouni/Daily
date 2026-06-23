@@ -123,7 +123,11 @@ async function withPage(fn) {
   } finally {
     chrome.kill();
     await once(chrome, "exit").catch(() => {});
-    rmSync(userDataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    try {
+      rmSync(userDataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    } catch {
+      // Chrome may still release profile files after the browser process exits.
+    }
   }
 }
 
