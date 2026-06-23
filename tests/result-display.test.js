@@ -1,8 +1,9 @@
 const assert = require("node:assert/strict");
 const { spawn } = require("node:child_process");
 const { once } = require("node:events");
-const { existsSync } = require("node:fs");
+const { existsSync, mkdtempSync, rmSync } = require("node:fs");
 const http = require("node:http");
+const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 
@@ -88,10 +89,12 @@ async function withPage(fn) {
   assert.ok(existsSync(CHROME_BIN), `Chrome not found at ${CHROME_BIN}`);
 
   const port = 9222 + Math.floor(Math.random() * 1000);
+  const userDataDir = mkdtempSync(path.join(os.tmpdir(), "ecg-result-test-"));
   const chrome = spawn(CHROME_BIN, [
     "--headless=new",
     "--disable-gpu",
     "--no-sandbox",
+    `--user-data-dir=${userDataDir}`,
     `--remote-debugging-port=${port}`,
     "about:blank"
   ], { stdio: "ignore" });
@@ -119,6 +122,7 @@ async function withPage(fn) {
   } finally {
     chrome.kill();
     await once(chrome, "exit").catch(() => {});
+    rmSync(userDataDir, { recursive: true, force: true });
   }
 }
 
