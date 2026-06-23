@@ -11,9 +11,9 @@ const ROOT = path.resolve(__dirname, "..");
 const INDEX_URL = `file://${path.join(ROOT, "index.html")}`;
 const CHROME_BIN = process.env.CHROME_BIN || "/usr/local/bin/google-chrome";
 
-function requestJson(url) {
+function requestJson(url, method = "GET") {
   return new Promise((resolve, reject) => {
-    http.get(url, res => {
+    const req = http.request(url, { method }, res => {
       let body = "";
       res.setEncoding("utf8");
       res.on("data", chunk => { body += chunk; });
@@ -24,7 +24,10 @@ function requestJson(url) {
           reject(err);
         }
       });
-    }).on("error", reject);
+    });
+
+    req.on("error", reject);
+    req.end();
   });
 }
 
@@ -102,7 +105,7 @@ async function withPage(fn) {
   try {
     await waitForChrome(port);
 
-    const target = await requestJson(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(INDEX_URL)}`);
+    const target = await requestJson(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(INDEX_URL)}`, "PUT");
     const ws = await connectWebSocket(target.webSocketDebuggerUrl);
     const client = createDevToolsClient(ws);
 
