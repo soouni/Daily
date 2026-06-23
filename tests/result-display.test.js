@@ -117,12 +117,13 @@ async function withPage(fn) {
 
       return await fn(client);
     } finally {
+      await client.send("Browser.close").catch(() => {});
       client.close();
     }
   } finally {
     chrome.kill();
     await once(chrome, "exit").catch(() => {});
-    rmSync(userDataDir, { recursive: true, force: true });
+    rmSync(userDataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 }
 
