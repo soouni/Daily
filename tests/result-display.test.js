@@ -7,6 +7,7 @@ const { test } = require("node:test");
 
 const CHROME_BIN = process.env.CHROME_BIN || "/usr/bin/google-chrome-stable";
 const APP_URL = new URL(`file://${path.resolve(__dirname, "..", "index.html")}`).href;
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 class DevToolsClient {
   constructor(wsUrl) {
@@ -83,8 +84,21 @@ async function launchChrome() {
   });
 
   async function close() {
-    chrome.kill();
-    fs.rmSync(profileDir, { force: true, recursive: true });
+    if (chrome.exitCode === null) {
+      const exited = new Promise(resolve => chrome.once("exit", resolve));
+      chrome.kill();
+      await Promise.race([exited, wait(2000)]);
+    }
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        fs.rmSync(profileDir, { force: true, recursive: true });
+        return;
+      } catch (error) {
+        if (attempt === 4) throw error;
+        await wait(100);
+      }
+    }
   }
 
   return { browserWsUrl, close };
