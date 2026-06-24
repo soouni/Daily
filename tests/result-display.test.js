@@ -98,7 +98,9 @@ test("complete ECG decision path displays the rendered result card", async t => 
   const response = await fetch(`http://${browserUrl.host}/json/new?${encodeURIComponent(APP_URL)}`, {
     method: "PUT",
   });
-  assert.equal(response.ok, true, await response.text());
+  if (!response.ok) {
+    assert.fail(await response.text());
+  }
 
   const target = await response.json();
   const client = new DevToolsClient(target.webSocketDebuggerUrl);
