@@ -137,10 +137,18 @@ test("complete ECG decision path displays the rendered result card", async t => 
     expression: `(
       async () => {
         const waitForRender = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const findOption = async label => {
+          for (let attempt = 0; attempt < 50; attempt++) {
+            const button = Array.from(document.querySelectorAll(".option-btn"))
+              .find(candidate => candidate.textContent.trim() === label);
+            if (button) return button;
+            await waitForRender();
+          }
+          throw new Error("Missing option: " + label);
+        };
+
         for (const label of ["Jah, normaalne", "Jah", "Normaalne"]) {
-          const button = Array.from(document.querySelectorAll(".option-btn"))
-            .find(candidate => candidate.textContent.trim() === label);
-          if (!button) throw new Error("Missing option: " + label);
+          const button = await findOption(label);
           button.click();
           await waitForRender();
         }
