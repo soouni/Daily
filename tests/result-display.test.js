@@ -144,6 +144,16 @@ async function waitForReady(cdp, sessionId) {
   throw new Error("Page did not finish loading");
 }
 
+function waitForProcessExit(child) {
+  if (child.exitCode !== null || child.signalCode !== null) {
+    return Promise.resolve();
+  }
+
+  return new Promise(resolve => {
+    child.once("exit", resolve);
+  });
+}
+
 test("a completed decision path shows the diagnosis card", async () => {
   const server = createServer();
   const port = await listen(server);
@@ -209,6 +219,7 @@ test("a completed decision path shows the diagnosis card", async () => {
       cdp.close();
     }
     chrome.kill();
+    await waitForProcessExit(chrome);
     await fs.rm(userDataDir, { recursive: true, force: true });
     await closeServer(server);
   }
